@@ -27,6 +27,11 @@
     "eslint-config-next": "15.5.27",
     "tailwindcss": "^4.3.3"
   },
+  "overrides": {
+    "jwks-rsa": {
+      "jose": "^4.15.9"
+    }
+  },
   "engines": {
     "node": "22.x"
   }
