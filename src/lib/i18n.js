@@ -533,6 +533,10 @@ export const messages = {
     fr: "Laissez vide pour afficher une carte initiales. Utilisez une image déposée dans /public/images.",
     ar: "اتركه فارغًا لعرض بطاقة الأحرف الأولى. استخدم صورة موجودة في /public/images.",
   },
+  "admin.doctors.photoUrlInvalid": {
+    fr: "L'URL de la photo doit commencer par /images/ ou https://.",
+    ar: "يجب أن يبدأ رابط الصورة بـ /images/ أو https://.",
+  },
   "admin.doctors.services": { fr: "Soins proposés", ar: "العلاجات المقدمة" },
   "admin.doctors.workingDays": { fr: "Jours travaillés", ar: "أيام العمل" },
   "admin.doctors.hours": { fr: "Heures de travail", ar: "ساعات العمل" },

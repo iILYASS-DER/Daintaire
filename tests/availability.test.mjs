@@ -10,6 +10,7 @@ import {
   isWorkingDay,
   minutesToTime,
   overlaps,
+  pruneOrphanServiceIds,
   toMinutes,
   validateSlotRequest,
   weekdayOf,
@@ -324,4 +325,31 @@ test("validateServiceInput / validateDoctorInput", () => {
   const badDoc = validateDoctorInput({ workingHours: { start: "17:00", end: "09:00" } });
   assert.equal(badDoc.errors.displayName, "admin.doctors.nameRequired");
   assert.equal(badDoc.errors.workingHours, "admin.doctors.hoursInvalid");
+});
+
+test("pruneOrphanServiceIds retire les soins supprimés sans exclure le praticien", () => {
+  const services = [{ id: "real-1" }, { id: "real-2" }];
+  const doctors = [
+    { id: "d1", serviceIds: ["real-1", "ghost"] },
+    { id: "d2", serviceIds: ["ghost"] },
+    { id: "d3", serviceIds: [] },
+    { id: "d4" },
+  ];
+  const pruned = pruneOrphanServiceIds(doctors, services);
+
+  assert.deepEqual(pruned[0].serviceIds, ["real-1"]);
+  assert.deepEqual(pruned[1].serviceIds, []);
+  // Aucun changement → même objet, aucune mutation des entrées.
+  assert.equal(pruned[2], doctors[2]);
+  assert.equal(pruned[3], doctors[3]);
+  assert.deepEqual(doctors[0].serviceIds, ["real-1", "ghost"]);
+
+  // « Tous les soins » (aucune affectation valide) : le praticien d2 revient
+  // dans la sélection pour les autres soins — il n'est plus exclu partout.
+  const filtered = pruned.filter((d) =>
+    Array.isArray(d.serviceIds) && d.serviceIds.length
+      ? d.serviceIds.includes("real-2")
+      : true
+  );
+  assert.deepEqual(filtered.map((d) => d.id), ["d2", "d3", "d4"]);
 });

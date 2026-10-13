@@ -14,7 +14,11 @@
 
 import { APPOINTMENT_STATUS, COLLECTIONS, DEFAULT_PENDING_HOLD_HOURS, DEFAULT_TIMEZONE } from "@/lib/constants";
 import { normalizePhone, validateAppointmentInput, toMinutes } from "@/lib/validation";
-import { validateSlotRequest, minutesToTime } from "@/lib/availability";
+import {
+  validateSlotRequest,
+  minutesToTime,
+  pruneOrphanServiceIds,
+} from "@/lib/availability";
 import {
   fetchDoc,
   fsDoc,
@@ -86,7 +90,10 @@ export async function createAppointmentRequest(rawInput = {}, options = {}) {
   const startMin = toMinutes(clean.time);
   const end = minutesToTime(startMin + duration);
 
-  const doctors = (await listDoctors({ activeOnly: true })).filter((doctor) =>
+  const doctors = pruneOrphanServiceIds(
+    await listDoctors({ activeOnly: true }),
+    services
+  ).filter((doctor) =>
     Array.isArray(doctor.serviceIds) && doctor.serviceIds.length
       ? doctor.serviceIds.includes(service.id)
       : true

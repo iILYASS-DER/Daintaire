@@ -8,6 +8,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { DAY_KEYS } from "@/lib/i18n";
 import { apiFetch, i18nErrorMessage } from "@/lib/api";
 import { input as inputClass, label as labelClass } from "@/lib/ui";
+import { toMinutes } from "@/lib/validation";
 import {
   AdminPageHeader,
   EmptyState,
@@ -281,13 +282,23 @@ function DoctorForm({ value, onChange, services, busy, onSave, onCancel, t }) {
   const [localError, setLocalError] = useState(null);
   const set = (patch) => onChange({ ...value, ...patch });
 
+  /** Mêmes règles que validateDoctorInput côté serveur (évite un 400 à l'envoi). */
   function validate() {
     if (!value.displayName.trim() || value.displayName.trim().length < 2) {
       setLocalError(t("admin.doctors.nameRequired"));
       return false;
     }
-    if (!value.workingHours.start || !value.workingHours.end) {
+    const start = value.workingHours.start;
+    const end = value.workingHours.end;
+    const startMin = toMinutes(start);
+    const endMin = toMinutes(end);
+    if (startMin === null || endMin === null || endMin <= startMin) {
       setLocalError(t("admin.doctors.hoursInvalid"));
+      return false;
+    }
+    const photo = value.photoUrl.trim();
+    if (photo && !/^(\/images\/|https?:\/\/)/.test(photo)) {
+      setLocalError(t("admin.doctors.photoUrlInvalid"));
       return false;
     }
     setLocalError(null);

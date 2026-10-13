@@ -15,7 +15,10 @@ import {
   DEFAULT_TIMEZONE,
 } from "@/lib/constants";
 import { normalizePhone, validateDoctorInput, validateServiceInput, validateSettingsInput, validateSessionInput, validatePlanInput, toMinutes, isValidDateString, nowInTimeZone } from "@/lib/validation";
-import { validateSlotRequest, minutesToTime } from "@/lib/availability";
+import {
+  validateSlotRequest,
+  minutesToTime,
+} from "@/lib/availability";
 import { msg } from "@/lib/messages";
 import {
   fetchCollection,
@@ -32,6 +35,7 @@ import {
   runTransaction,
   srvTs,
   toJsonSafe,
+  writeBatch,
 } from "@/lib/server/store";
 import { addInterval, findConflict, lockDocId, removeInterval } from "@/lib/server/slots";
 import { ApiError } from "@/lib/server/booking";
@@ -560,6 +564,24 @@ export async function saveService(input) {
 export async function deleteService(id) {
   if (!id) throw new ApiError(400, "invalid_payload", msg("error.invalidPayload"));
   await fsDoc(`${COLLECTIONS.SERVICES}/${id}`).delete();
+
+  // Un soin supprimé ne doit pas rester référencé par les praticiens :
+  // un identifiant orphelin les exclurait de tous les autres soins.
+  const doctors = await listDoctors({ activeOnly: false });
+  const affected = doctors.filter(
+    (doctor) => Array.isArray(doctor.serviceIds) && doctor.serviceIds.includes(id)
+  );
+  if (affected.length) {
+    const batch = writeBatch();
+    for (const doctor of affected) {
+      batch.update(fsDoc(`${COLLECTIONS.DOCTORS}/${doctor.id}`), {
+        serviceIds: doctor.serviceIds.filter((sid) => sid !== id),
+      });
+    }
+    await batch.commit();
+    invalidateCache("doctors");
+  }
+
   invalidateCache("services");
   return { ok: true };
 }

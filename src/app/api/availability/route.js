@@ -6,7 +6,7 @@ import {
   listActiveOccupiedForDate,
   listBlockedForDate,
 } from "@/lib/server/store";
-import { computeAvailability } from "@/lib/availability";
+import { computeAvailability, pruneOrphanServiceIds } from "@/lib/availability";
 import { isValidDateString } from "@/lib/validation";
 import { toHttpError } from "@/lib/server/guard";
 import { ApiError } from "@/lib/server/booking";
@@ -37,6 +37,9 @@ export async function GET(request) {
     const settings = await getSettings();
     const doctors = await listDoctors({ activeOnly: true });
     const services = await listServices({ activeOnly: true });
+    // Les identifiants de soins supprimés ne doivent pas exclure un
+    // praticien de tous les soins (voir pruneOrphanServiceIds).
+    const prunedDoctors = pruneOrphanServiceIds(doctors, services);
 
     const service = serviceId
       ? services.find((s) => s.id === serviceId) || null
@@ -45,7 +48,7 @@ export async function GET(request) {
     if (serviceId && !service) {
       throw new ApiError(404, "service_not_found", msg("error.serviceNotFound"));
     }
-    if (doctorId && doctorId !== "any" && !doctors.find((d) => d.id === doctorId)) {
+    if (doctorId && doctorId !== "any" && !prunedDoctors.find((d) => d.id === doctorId)) {
       throw new ApiError(404, "doctor_not_found", msg("error.doctorNotFound"));
     }
 
@@ -56,7 +59,7 @@ export async function GET(request) {
 
     const result = computeAvailability({
       date,
-      doctors,
+      doctors: prunedDoctors,
       service,
       settings,
       occupied,

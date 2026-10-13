@@ -38,6 +38,31 @@ export function overlaps(aStart, aEnd, bStart, bEnd) {
   return aStart < bEnd && bStart < aEnd;
 }
 
+/**
+ * Nettoie les listes de praticiens : les identifiants de soins orphelins
+ * (un soin supprimé de la base) sont retirés des praticiens, sans quoi un
+ * seul soin supprimé exclurait le praticien de TOUS les autres soins.
+ * Un praticien dont toutes les affectations sont orphelines retrouve la
+ * signification « accueille tous les soins » (tableau vide).
+ *
+ * @param {Array} doctors praticiens bruts (Firestore / démo)
+ * @param {Array} services soins actuellement connus
+ * @returns {Array} praticiens avec serviceIds filtrés (nouveaux objets)
+ */
+export function pruneOrphanServiceIds(doctors, services) {
+  const knownIds = new Set(
+    (Array.isArray(services) ? services : []).map((s) => s?.id).filter(Boolean)
+  );
+  return (Array.isArray(doctors) ? doctors : []).map((doctor) => {
+    if (!doctor || !Array.isArray(doctor.serviceIds) || !doctor.serviceIds.length) {
+      return doctor;
+    }
+    const pruned = doctor.serviceIds.filter((id) => knownIds.has(id));
+    if (pruned.length === doctor.serviceIds.length) return doctor;
+    return { ...doctor, serviceIds: pruned };
+  });
+}
+
 /** Instant UTC correspondant à une horloge murale dans un fuseau. */
 export function zonedTimeToUtc(dateStr, timeStr, timeZone = DEFAULT_TIMEZONE) {
   const [y, m, d] = dateStr.split("-").map(Number);

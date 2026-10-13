@@ -272,7 +272,7 @@ export function validateDoctorInput(input = {}) {
     : [];
 
   if (photoUrl && !/^(\/images\/|https?:\/\/)/.test(photoUrl))
-    errors.photoUrl = "admin.doctors.photoUrl";
+    errors.photoUrl = "admin.doctors.photoUrlInvalid";
 
   const serviceIds = Array.isArray(input.serviceIds)
     ? input.serviceIds.map((s) => sanitizeText(s, 60)).filter(Boolean)

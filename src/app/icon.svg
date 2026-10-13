@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Cabinet Dentaire Ilyass">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1e86f0"/>
+      <stop offset="1" stop-color="#0b2545"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <path
+    fill="#ffffff"
+    d="M32 13
+       C 26 13, 23.5 10, 17.5 10
+       C 10 10, 6 15.5, 6 23.5
+       C 6 30, 8 34, 9.4 40
+       C 10.9 46, 12 55, 15.5 55
+       C 19.1 55, 19.5 49.5, 20.3 44.5
+       C 20.9 39.6, 22.5 37, 25.5 37
+       C 28.5 37, 30.1 39.6, 30.7 44.5
+       C 31.5 49.5, 31.9 55, 35.5 55
+       C 39 55, 40.1 46, 41.6 40
+       C 43 34, 45 30, 45 23.5
+       C 45 15.5, 41 10, 36.5 10
+       C 30.5 10, 28 13, 32 13
+       Z"
+  />
+</svg>
