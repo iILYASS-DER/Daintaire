@@ -1,0 +1,184 @@
+rules_version = '2';
+
+/**
+ * Règles Firestore — Cabinet Dentaire Ilyass
+ * Principes : refus par défaut, aucune donnée patient publique,
+ * écritures publiques limitées à la création d'une demande de rendez-vous
+ * (avec validation stricte) et à l'ajout monotone d'un verrou de créneau.
+ *
+ * Le compte de service (Firebase Admin SDK) contourne ces règles : c'est
+ * la voie utilisée par l'espace staff côté serveur.
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function roleOf(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.role;
+    }
+
+    function isAdmin() {
+      return signedIn() && (
+        request.auth.token.role == 'admin' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          roleOf(request.auth.uid) == 'admin')
+      );
+    }
+
+    function isStaff() {
+      return signedIn() && (
+        request.auth.token.role == 'admin' ||
+        request.auth.token.role == 'doctor' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          (roleOf(request.auth.uid) == 'admin' || roleOf(request.auth.uid) == 'doctor'))
+      );
+    }
+
+    function validString(value, maxLen) {
+      return value is string && value.size() <= maxLen;
+    }
+
+    function validTime(value) {
+      return value is string && value.matches('^[0-2][0-9]:[0-5][0-9]$');
+    }
+
+    function validDate(value) {
+      return value is string && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    /* ------------------------------------------------- contenus publiés */
+
+    match /services/{id} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /doctors/{id} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /clinicSettings/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /blockedSlots/{id} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    /**
+     * Verrous de créneaux : lisibles publiquement (calcul des disponibilités,
+     * aucun PII), créables publiquement, mais toute mise à jour publique doit
+     * AJOUTER exactement un intervalle — jamais retirer ni modifier les autres.
+     */
+    match /slotLocks/{lockId} {
+      allow read: if true;
+
+      allow create: if
+        validString(request.resource.data.doctorId, 60) &&
+        validDate(request.resource.data.date) &&
+        request.resource.data.intervals is list &&
+        request.resource.data.intervals.size() <= 200;
+
+      allow update: if
+        isStaff() ||
+        (
+          resource.data.doctorId == request.resource.data.doctorId &&
+          resource.data.date == request.resource.data.date &&
+          request.resource.data.intervals is list &&
+          request.resource.data.intervals.size() == resource.data.intervals.size() + 1
+        );
+
+      allow delete: if isStaff();
+    }
+
+    /* --------------------------------------------- demandes de RDV (public) */
+
+    match /appointments/{id} {
+      // Aucune lecture publique : le patient utilise uniquement son numéro
+      // de référence via l'API, l'équipe voit tout depuis l'administration.
+      allow read: if isStaff();
+      allow update, delete: if isStaff();
+
+      allow create: if
+        request.resource.data.status == 'pending' &&
+        request.resource.data.source == 'web' &&
+        validString(request.resource.data.reference, 20) &&
+        validString(request.resource.data.serviceId, 60) &&
+        validString(request.resource.data.doctorId, 60) &&
+        validString(request.resource.data.doctorName, 120) &&
+        validDate(request.resource.data.date) &&
+        validTime(request.resource.data.start) &&
+        validTime(request.resource.data.end) &&
+        validString(request.resource.data.patientName, 80) &&
+        validString(request.resource.data.patientPhone, 30) &&
+        validString(request.resource.data.patientEmail, 160) &&
+        validString(request.resource.data.note, 500) &&
+        request.resource.data.internalNotes == '' &&
+        request.resource.data.durationMinutes is int &&
+        request.resource.data.durationMinutes >= 5 &&
+        request.resource.data.durationMinutes <= 480 &&
+        request.resource.data.pendingExpiresAtMs is number &&
+        request.resource.data.createdAtMs is number;
+    }
+
+    /**
+     * Marqueur de référence (non sensible) : permet la consultation publique
+     * d'un état par référence + empreinte de téléphone. Interdit en liste
+     * pour éviter tout énumération.
+     */
+    match /appointmentReferences/{reference} {
+      allow create: if
+        request.resource.data.reference == reference &&
+        validString(request.resource.data.appointmentId, 80) &&
+        request.resource.data.status == 'pending' &&
+        validDate(request.resource.data.date) &&
+        validTime(request.resource.data.start);
+
+      allow get: if true;
+      allow list: if isStaff();
+      allow update: if isStaff();
+      allow delete: if isStaff();
+    }
+
+    /* ------------------------------------------------- échanges de contact */
+
+    match /contactMessages/{id} {
+      allow create: if
+        validString(request.resource.data.name, 120) &&
+        validString(request.resource.data.email, 200) &&
+        validString(request.resource.data.subject, 200) &&
+        validString(request.resource.data.message, 1600) &&
+        request.resource.data.status == 'new';
+      allow read, update, delete: if isStaff();
+    }
+
+    /* ------------------------------------- données médicales (équipe seule) */
+
+    match /treatmentPlans/{id} {
+      allow read, write: if isStaff();
+    }
+
+    match /treatmentSessions/{id} {
+      allow read, write: if isStaff();
+    }
+
+    /* ------------------------------------------------ comptes utilisateurs */
+
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, update, delete: if isAdmin();
+    }
+
+    /* ------------------------------------- tout le reste : refus explicite */
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

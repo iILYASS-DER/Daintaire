@@ -1,0 +1,30 @@
+{
+  "name": "cabinet-dentaire-ilyass",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Site web bilingue (FR/AR) du Cabinet Dentaire Ilyass - Tiflet, Maroc",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "node --import ./scripts/register-alias.mjs --test \"tests/*.test.mjs\"",
+    "seed": "node scripts/seed-demo.mjs",
+    "setup:admin": "node scripts/setup-admin.mjs"
+  },
+  "dependencies": {
+    "@next/env": "^16.4.0",
+    "firebase": "^13.0.0",
+    "firebase-admin": "^14.5.0",
+    "lucide-react": "^1.55.0",
+    "next": "15.5.27",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "eslint": "^9.39.0",
+    "eslint-config-next": "15.5.27",
+    "tailwindcss": "^4.3.3"
+  }
+}
