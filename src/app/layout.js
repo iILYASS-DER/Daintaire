@@ -3,6 +3,7 @@ import { Inter, Cairo } from "next/font/google";
 import { LanguageProvider } from "@/context/LanguageContext";
 import Analytics from "@/components/Analytics";
 import SkipLink from "@/components/site/SkipLink";
+import RegisterSW from "@/components/RegisterSW";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -66,6 +67,7 @@ export default function RootLayout({ children }) {
           <SkipLink />
           {children}
           <Analytics />
+          <RegisterSW />
         </LanguageProvider>
       </body>
     </html>
