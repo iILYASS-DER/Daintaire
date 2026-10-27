@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.daintaire_ilyaaa.twa",
+      "sha256_cert_fingerprints": [
+        "52:74:05:BE:F5:2A:9C:5C:48:9F:E4:33:FD:21:DA:25:0F:55:9F:42:69:6B:F6:DA:A3:7B:18:DE:6F:29:9E:1A"
+      ]
+    }
+  }
+]
